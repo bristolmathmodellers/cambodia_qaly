@@ -1,6 +1,9 @@
 setwd("C:/Users/Owner/Documents/QALY")
-load("qalyall.RData")
-mydata <- qalyall
+load("qalyall.RData") 
+mydata <- qalyall %>% filter(!is.na(model) & !is.na(stage) & !is.na(cured))
+
+# subset the data to exclude individuals with "NA" for model, stage, or cured.
+
 mydata$pat_id <- as.factor(mydata$pat_id) #changing data types
 mydata$stage <- as.factor(mydata$stage)
 mydata$dem_age <- as.numeric(mydata$dem_age)
@@ -76,8 +79,21 @@ logLik(fit)
 lm2 <- glm(thai_utility ~ point + model + (1|pat_id) + (1|stage) + (1|dem_age) + (1|dem_sex), data = mydata, REML=FALSE)
 
 #MULTILEVEL MODEL
-lmer(thai_utility~point+(1|pat_id), data=mydata, REML=FALSE) #Basic model, poor fit
-lmer1 <- lmer(thai_utility~point+stage+dem_sex+dem_age+cured+(1|pat_id), data=mydata, REML=FALSE)
+lmer0 <- lmer(thai_utility~point+(1|pat_id), data=mydata, REML=FALSE) #Basic model, poor fit
+lmer1 <- lmer(thai_utility~point+stage+dem_sex+dem_age+point*cured+(1|pat_id), data=mydata, REML=FALSE)
+
+# use F0 as base for stage
+# try with indo_utility
+# what about if we ignore age and/or sex?
+
+# point+stage+(1|pat_id)
+# point+stage+cured*point+(1|pat_id)
+# point+stage+cured*point+dem_sex+dem_age+(1|pat_id) # do drop1 on this one or the most complex one
+# which model is preferred by AIC?
+# p-values for each 
+
+
+
 coef1 <- data.frame(coef(summary(lmer1))) #Obtaining p values by using the normal approximation
 coef1$p.z <- 2 * (1 - pnorm(abs(coef1$t.value)))
 coef1
@@ -86,7 +102,7 @@ library(pbkrtest)
 df.KR1 <- get_ddf_Lb(lmer1, fixef(lmer1)) #Getting the Kenward Roger-approximated df
 coef1$p.KR <- 2 * (1 - pt(abs(coef1$t.value), df.KR1)) #Getting p-values from the t-distribution using the t-values and approximated df
 coef1
-lmer2 <- lmer(thai_utility~point+stage+point*stage+model+dem_sex+dem_age+dem_age*stage+cured+(1|pat_id), data=mydata, REML=FALSE)
+lmer2 <- lmer(thai_utility~point+stage+point*stage+model+dem_sex+dem_age+dem_age*stage+point*cured+(1|pat_id), data=mydata, REML=FALSE)
 coef2 <- data.frame(coef(summary(lmer2))) #Obtaining p values by using the normal approximation
 coef2$p.z <- 2 * (1 - pnorm(abs(coef2$t.value)))
 coef2
@@ -95,19 +111,24 @@ coef2$p.KR <- 2 * (1 - pt(abs(coef2$t.value), df.KR2)) #Getting p-values from th
 coef2
 qqnorm(residuals(lmer2))
 qqline(residuals(lmer2))
-nullmer <- thai_utility ~ (1 | pat_id)
+nullmer <- lmer(thai_utility ~ (1 | pat_id), data=mydata, REML=FALSE)
 anova(nullmer, lmer2) # Can't compare models, not sure why
+drop1(lmer2)
+
 
 #Does F stage grouping matter?
 br1 <- betareg(betas ~ point + stage, data=mydata)
 mydata$new <- as.factor(mydata$stage)
-levels(mydata$new) <- c("mild", "mild", "moderate", "moderate", "cirrhosis", "post", "post")
+levels(mydata$new) <- c("post","mild", "mild", "moderate", "moderate", "cirrhosis", "post")
 br2 <- betareg(betas ~ point + new, data = mydata)
 mydata$new2 <- as.factor(mydata$stage)
-levels(mydata$new2) <- c("preC", "preC", "preC", "postC", "postC", "postC")
+levels(mydata$new2) <- c("postC","preC", "preC", "preC", "preC", "postC", "postC")
 br3 <- betareg(betas ~ point + new2, data = mydata)
 summary(br1)
+AIC(br1)
 summary(br2)
+AIC(br2)
 summary(br3)
+AIC(br3) 
 library(lmtest)
 lrtest(br1, br2, br3)
