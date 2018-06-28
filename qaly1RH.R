@@ -1,5 +1,6 @@
 setwd("C:/Users/Owner/Documents/QALY")
-load("qalyall.RData") 
+load("qalyall.RData")
+library(dplyr)
 mydata <- qalyall %>% filter(!is.na(model) & !is.na(stage) & !is.na(cured))
 
 # subset the data to exclude individuals with "NA" for model, stage, or cured.
@@ -79,21 +80,39 @@ logLik(fit)
 lm2 <- glm(thai_utility ~ point + model + (1|pat_id) + (1|stage) + (1|dem_age) + (1|dem_sex), data = mydata, REML=FALSE)
 
 #MULTILEVEL MODEL
-lmer0 <- lmer(thai_utility~point+(1|pat_id), data=mydata, REML=FALSE) #Basic model, poor fit
-lmer1 <- lmer(thai_utility~point+stage+dem_sex+dem_age+point*cured+(1|pat_id), data=mydata, REML=FALSE)
-
-# use F0 as base for stage
-# try with indo_utility
+lmer0 <- lmer(indo_utility~point+(1|pat_id), data=mydata, REML=FALSE) #Basic model, poor fit
+lmer1 <- lmer(indo_utility~point+relevel(stage, ref="F0")+(1|pat_id))
+lmer2 <- lmer(indo_utility~point+relevel(stage, ref="F0")+cured*point+(1|pat_id))
+lmer3 <- lmer(indo_utility~point+relevel(stage, ref="F0")+dem_sex+dem_age+point*cured+(1|pat_id), data=mydata, REML=FALSE)
+lmer4 <- lmer(indo_utility~point+relevel(stage, ref="F0")+point*stage+model+dem_sex+dem_age+dem_age*stage+point*cured+(1|pat_id), data=mydata, REML=FALSE)
+lmerfixd <- lmer(indo_utility~point+relevel(stage, ref="F0")+dem_age+dem_sex+cured+model+(1|pat_id))
+# Changing the base level for 'stage' to F0
 # what about if we ignore age and/or sex?
 
-# point+stage+(1|pat_id)
-# point+stage+cured*point+(1|pat_id)
-# point+stage+cured*point+dem_sex+dem_age+(1|pat_id) # do drop1 on this one or the most complex one
-# which model is preferred by AIC?
+#drop1 on the most complex model
+drop1(lmer4)
+library(lmerTest)
+drop1(lmer4, ddf="Kenward-Roger")
+drop1(lmerfixd) #Model with fixed effects only
+# which model is preferred by AIC? - Everything but point*stage and cured (see drop1 outputs for each model) 
 # p-values for each 
+library(pbkrtest)
+coef4 <- data.frame(coef(summary(lmer4))) #Obtaining p values by using the normal approximation
+coef4$p.z <- 2 * (1 - pnorm(abs(coef4$t.value)))
+df.KR4 <- get_ddf_Lb(lmer4, fixef(lmer4)) #Getting the Kenward Roger-approximated df
+coef4$p.KR <- 2 * (1 - pt(abs(coef4$t.value), df.KR4)) #Getting p-values from the t-distribution using the t-values and approximated df
+coef4
 
+#Final reduced model
+lmerfin <- lmer(indo_utility~point+relevel(stage, ref="F0")+model+dem_sex+dem_age+dem_age*stage+(1|pat_id), data=mydata, REML=FALSE)
+summary(lmerfin)
+coeffin <- data.frame(coef(summary(lmerfin))) #Obtaining p values by using the normal approximation
+coeffin$p.z <- 2 * (1 - pnorm(abs(coeffin$t.value)))
+df.KRfin <- get_ddf_Lb(lmerfin, fixef(lmerfin)) #Getting the Kenward Roger-approximated df
+coeffin$p.KR <- 2 * (1 - pt(abs(coeffin$t.value), df.KRfin)) #Getting p-values from the t-distribution using the t-values and approximated df
+coeffin
 
-
+#Other p values
 coef1 <- data.frame(coef(summary(lmer1))) #Obtaining p values by using the normal approximation
 coef1$p.z <- 2 * (1 - pnorm(abs(coef1$t.value)))
 coef1
@@ -102,7 +121,7 @@ library(pbkrtest)
 df.KR1 <- get_ddf_Lb(lmer1, fixef(lmer1)) #Getting the Kenward Roger-approximated df
 coef1$p.KR <- 2 * (1 - pt(abs(coef1$t.value), df.KR1)) #Getting p-values from the t-distribution using the t-values and approximated df
 coef1
-lmer2 <- lmer(thai_utility~point+stage+point*stage+model+dem_sex+dem_age+dem_age*stage+point*cured+(1|pat_id), data=mydata, REML=FALSE)
+lmer4 <- lmer(indo_utility~point+relevel(stage, ref="F0")+point*stage+model+dem_sex+dem_age+dem_age*stage+point*cured+(1|pat_id), data=mydata, REML=FALSE)
 coef2 <- data.frame(coef(summary(lmer2))) #Obtaining p values by using the normal approximation
 coef2$p.z <- 2 * (1 - pnorm(abs(coef2$t.value)))
 coef2
@@ -112,7 +131,7 @@ coef2
 qqnorm(residuals(lmer2))
 qqline(residuals(lmer2))
 nullmer <- lmer(thai_utility ~ (1 | pat_id), data=mydata, REML=FALSE)
-anova(nullmer, lmer2) # Can't compare models, not sure why
+anova(nullmer, lmer2)
 drop1(lmer2)
 
 
@@ -132,3 +151,17 @@ summary(br3)
 AIC(br3) 
 library(lmtest)
 lrtest(br1, br2, br3)
+
+#SUMMARY
+
+#All models apart from those with point*stage and cured removed gave higher AICs
+#(see drop1 outputs for each model),
+#meaning that retaining these two variables would not improve the predictive or
+#explanatory power of the model.
+
+#Indo utility was significantly higher during treatment compared to
+#before treatment (0.03 unit increase), and utility was higher still
+#post-treatment (0.05 unit increase).
+#Sex 1 had significantly higher utility than sex 0 (0.02 units higher).
+#There were no other significant influences on utility.
+
