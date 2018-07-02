@@ -25,7 +25,7 @@ ggboxplot(mydata, x = "point", y = "thai_utility", color = "model")
 ggline(mydata, x = "point", y = "thai_utility", color = "model")
 means<- round(tapply(mydata$thai_utility, mydata$point, mean))
 means
-install.packages(gplots)
+install.packages("gplots")
 library(gplots)
 plotmeans(thai_utility~point, digits=2, ccol=red, mean.labels=T, main="EQ5D means by treatment stage")
 boxplot(thai_utility ~ point, main="EQ5d by treatment stage (mean is blue dot)", xlab="Treatment stage", ylab="EQ5D", col=rainbow(7))
@@ -164,4 +164,10 @@ lrtest(br1, br2, br3)
 #post-treatment (0.05 unit increase).
 #Sex 1 had significantly higher utility than sex 0 (0.02 units higher).
 #There were no other significant influences on utility.
+
+###
+# Get coefficient estimates to use in Markov model
+mydata$combo1 <- as.factor(paste(mydata$stage,mydata$point,sep="_"))
+lmer5 <- lmer(indo_utility~relevel(combo1, ref="F0_initial")+(1|pat_id), data=mydata, REML=FALSE)
+
 
