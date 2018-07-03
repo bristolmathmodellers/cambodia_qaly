@@ -169,5 +169,13 @@ lrtest(br1, br2, br3)
 # Get coefficient estimates to use in Markov model
 mydata$combo1 <- as.factor(paste(mydata$stage,mydata$point,sep="_"))
 lmer5 <- lmer(indo_utility~relevel(combo1, ref="F0_initial")+(1|pat_id), data=mydata, REML=FALSE)
+coef5 <- data.frame(coef(summary(lmer5))) #Obtaining p values by using the normal approximation
+coef5$p.z <- 2 * (1 - pnorm(abs(coef5$t.value)))
+library(pbkrtest)
+df.KR5 <- get_ddf_Lb(lmer5, fixef(lmer5)) #Getting the Kenward Roger-approximated df
+coef5$p.KR <- 2 * (1 - pt(abs(coef5$t.value), df.KR5)) #Getting p-values from the t-distribution using the t-values and approximated df
+coef5
 
-
+# Getting SE with CLs
+library(lsmeans)
+lsmeans(lmer5, test.effs=NULL, method.grad='simple', specs='combo1')
