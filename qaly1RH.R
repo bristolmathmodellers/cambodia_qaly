@@ -176,6 +176,6 @@ df.KR5 <- get_ddf_Lb(lmer5, fixef(lmer5)) #Getting the Kenward Roger-approximate
 coef5$p.KR <- 2 * (1 - pt(abs(coef5$t.value), df.KR5)) #Getting p-values from the t-distribution using the t-values and approximated df
 coef5
 
-# Getting SE with CLs
+# Getting SE and CIs
 library(lsmeans)
 lsmeans(lmer5, test.effs=NULL, method.grad='simple', specs='combo1')
