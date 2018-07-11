@@ -179,3 +179,16 @@ coef5
 # Getting SE and CIs
 library(lsmeans)
 lsmeans(lmer5, test.effs=NULL, method.grad='simple', specs='combo1')
+
+#### look at point/cure instead of point*cure
+ mydata$pointcured <- mydata$point
+ mydata$pointcured[mydata$cured==T & mydata$point=="SVR"] <- "SVR-cured"
+ mydata$pointcured[mydata$cured==F & mydata$point=="SVR"] <- "SVR-failed"
+ mydata$pointcured[mydata$cured==T & mydata$point=="treatment"] <- "treatment-cured"
+ mydata$pointcured[mydata$cured==F & mydata$point=="treatment"] <- "treatment-failed"
+ # first make a model with this instead of the point*cure interaction and see if any significant effect
+ 
+ ## are the pKR values adjusted for multiple testing?
+ 
+
+
