@@ -181,15 +181,16 @@ library(lsmeans)
 lsmeans(lmer5, test.effs=NULL, method.grad='simple', specs='combo1')
 
 #### look at point/cure instead of point*cure
- mydata$pointcured <- mydata$point
+ mydata$pointcured <- as.character(mydata$point)
  mydata$pointcured[mydata$cured==T & mydata$point=="SVR"] <- "SVR-cured"
  mydata$pointcured[mydata$cured==F & mydata$point=="SVR"] <- "SVR-failed"
  mydata$pointcured[mydata$cured==T & mydata$point=="treatment"] <- "treatment-cured"
  mydata$pointcured[mydata$cured==F & mydata$point=="treatment"] <- "treatment-failed"
-# ERROR - "invalid factor level, NA generated"
+mydata$pointcured <- as.factor(mydata$pointcured)
 
   # first make a model with this instead of the point*cure interaction and see if any significant effect
- lmeralt <- lmer(indo_utility~point+relevel(stage, ref="F0")+point*stage+model+dem_sex+dem_age+dem_age*stage+pointcured+(1|pat_id), data=mydata, REML=FALSE)
+ lmeralt <- lmer(indo_utility~relevel(stage, ref="F0")+model+dem_sex+dem_age+pointcured+(1|pat_id), data=mydata, REML=FALSE)
+ drop1(lmeralt)
  
  ## are the pKR values adjusted for multiple testing?
  # ANSWER - I would say yes (KR df are calculated as the first part of the process - therefore is this adjustment?)
