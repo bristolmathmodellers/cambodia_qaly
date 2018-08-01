@@ -188,13 +188,17 @@ lsmeans(lmer5, test.effs=NULL, method.grad='simple', specs='combo1')
  mydata$pointcured[mydata$cured==F & mydata$point=="treatment"] <- "treatment-failed"
 mydata$pointcured <- as.factor(mydata$pointcured)
 
-  # first make a model with this instead of the point*cure interaction and see if any significant effect
+# first make a model with this instead of the point*cure interaction and see if any significant effect
  lmeralt <- lmer(indo_utility~relevel(stage, ref="F0")+model+dem_sex+dem_age+pointcured+(1|pat_id), data=mydata, REML=FALSE)
  drop1(lmeralt)
  
- ## are the pKR values adjusted for multiple testing?
+## are the pKR values adjusted for multiple testing?
  # ANSWER - I would say yes (KR df are calculated as the first part of the process - therefore is this adjustment?)
  # but I am not sure if what I've done is sufficient, would like a second opinion.
  # See https://seriousstats.wordpress.com/tag/kenward-roger-approximation/
 
-
+#Does thai vs indo utility make a difference?
+lmerthai <- lmer(thai_utility~relevel(combo1, ref="F0_initial")+(1|pat_id), data=mydata, REML=FALSE)
+anova(lmer5, lmerthai, test="Chisq") #Not significantly different
+library(lsmeans)
+lsmeans(lmerthai, test.effs=NULL, method.grad='simple', specs='combo1')
